@@ -3,32 +3,23 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Http\Request;
-use App\Models\Language;
+use Illuminate\Support\Facades\App;
 
 class SetLocale
 {
-    public function handle(Request $request, Closure $next)
+    /**
+     * Handle an incoming request.
+     */
+    public function handle($request, Closure $next)
     {
-        // Try first URL segment
-        $segment = $request->segment(1);
+        // Get the language from route or session, or fallback to config default
+        $locale = $request->route('lang') ?? session('locale', config('app.locale'));
 
-        if ($segment) {
-            $lang = Language::where('code', $segment)->where('active', true)->first();
-        } else {
-            $lang = null;
-        }
+        // ✅ Correct Laravel way — DO NOT use PHP's setlocale() here
+        App::setLocale($locale);
 
-        if (! $lang) {
-            // fallback to default language entry
-            $lang = Language::where('is_default', true)->first();
-        }
-
-        if ($lang) {
-            app()->setLocale($lang->code);
-            // optionally store current language in container for views
-            view()->share('currentLanguage', $lang);
-        }
+        // Save it to session
+        session(['locale' => $locale]);
 
         return $next($request);
     }
